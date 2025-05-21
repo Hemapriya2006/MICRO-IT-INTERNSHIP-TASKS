@@ -1,0 +1,200 @@
+/*Rock-Paper-Scissors Game
+
+The Rock-Paper-Scissors game is a simple interactive game where players choose rock, paper, or scissors
+to compete against the computer. The winner is determined based on the classic rules: rock crushes
+scissors, scissors cuts paper, and paper covers rock. */
+
+import java.util.*;
+public class RockPaperScissors {
+    enum Move {
+        ROCK, PAPER, SCISSORS;
+        static Move getRandomMove() {
+            return values()[new Random().nextInt(values().length)];
+        }
+        static Move fromString(String input) {
+            switch (input.toLowerCase()) {
+                case "rock": return ROCK;
+                case "paper": return PAPER;
+                case "scissors": return SCISSORS;
+                default: return null;
+            }
+        }
+    }
+    static class Round {
+        Move playerMove;
+        Move computerMove;
+        String result;
+        Round(Move player, Move computer, String result) {
+            this.playerMove = player;
+            this.computerMove = computer;
+            this.result = result;
+        }
+        @Override
+        public String toString() {
+            return "You: " + playerMove + ", Computer: " + computerMove + " => " + result;
+        }
+    }
+    static Scanner sc = new Scanner(System.in);
+    static int playerScore = 0, computerScore = 0, drawCount = 0;
+    static int winStreak = 0, loseStreak = 0, maxWinStreak = 0, maxLoseStreak = 0;
+    static boolean hardMode = false;
+    static List<Round> history = new ArrayList<>();
+    public static void main(String[] args) {
+        System.out.println("=== Welcome to Rock-Paper-Scissors Game ===");
+        chooseDifficulty();
+        boolean playAgain;
+        do {
+            resetScores();
+            int rounds = selectRounds();
+            playRounds(rounds);
+            declareWinner();
+            showStatistics(rounds);
+            playAgain = askReplay();
+        } while (playAgain);
+        System.out.println("Thanks for playing.");
+    }
+    private static void chooseDifficulty() {
+        System.out.print("Choose difficulty (easy/hard): ");
+        String input = sc.nextLine().toLowerCase();
+        hardMode = input.equals("hard");
+        System.out.println("You selected " + (hardMode ? "Hard" : "Easy") + " mode.");
+    }
+    private static void resetScores() {
+        playerScore = 0;
+        computerScore = 0;
+        drawCount = 0;
+        winStreak = 0;
+        loseStreak = 0;
+        maxWinStreak = 0;
+        maxLoseStreak = 0;
+        history.clear();
+    }
+    private static int selectRounds() {
+        System.out.print("How many rounds would you like to play: ");
+        int rounds = 0;
+        while (rounds < 1) {
+            try {
+                rounds = Integer.parseInt(sc.nextLine());
+                if (rounds < 1) throw new Exception();
+            } catch (Exception e) {
+                System.out.print("Invalid input. Enter again: ");
+                rounds = 0;
+            }
+        }
+        return rounds;
+    }
+    private static void playRounds(int totalRounds) {
+        Map<Move, Integer> playerMoveFrequency = new HashMap<>();
+        for (int i = 1; i <= totalRounds; i++) {
+            System.out.println("\nRound " + i + " of " + totalRounds);
+            long startTime = System.currentTimeMillis();
+            Move playerMove = getPlayerMove();
+            long timeTaken = (System.currentTimeMillis() - startTime) / 1000;
+
+            playerMoveFrequency.put(playerMove, playerMoveFrequency.getOrDefault(playerMove, 0) + 1);
+
+            Move computerMove = (hardMode) ? predictMove(playerMoveFrequency) : Move.getRandomMove();
+
+            int result = determineWinner(playerMove, computerMove);
+            String outcome = getOutcomeText(result);
+            updateStreaks(result);
+            history.add(new Round(playerMove, computerMove, outcome));
+            if (history.size() > 5) history.remove(0);
+
+            displayRoundResult(playerMove, computerMove, outcome, timeTaken);
+        }
+    }
+    private static Move getPlayerMove() {
+        System.out.print("Enter your move (rock/paper/scissors): ");
+        Move move = null;
+        while (move == null) {
+            String input = sc.nextLine();
+            move = Move.fromString(input);
+            if (move == null) {
+                System.out.print("Invalid move. Try again: ");
+            }
+        }
+        return move;
+    }
+    private static Move predictMove(Map<Move, Integer> frequency) {
+        Move mostFrequent = Move.ROCK;
+        int max = -1;
+        for (Map.Entry<Move, Integer> entry : frequency.entrySet()) {
+            if (entry.getValue() > max) {
+                mostFrequent = entry.getKey();
+                max = entry.getValue();
+            }
+        }
+        switch (mostFrequent) {
+            case ROCK: return Move.PAPER;
+            case PAPER: return Move.SCISSORS;
+            case SCISSORS: return Move.ROCK;
+        }
+        return Move.getRandomMove();
+    }
+    private static int determineWinner(Move player, Move computer) {
+        if (player == computer) return 0;
+        switch (player) {
+            case ROCK: return (computer == Move.SCISSORS) ? 1 : -1;
+            case PAPER: return (computer == Move.ROCK) ? 1 : -1;
+            case SCISSORS: return (computer == Move.PAPER) ? 1 : -1;
+        }
+        return 0;
+    }
+    private static void updateStreaks(int result) {
+        if (result == 1) {
+            playerScore++;
+            winStreak++;
+            loseStreak = 0;
+            maxWinStreak = Math.max(maxWinStreak, winStreak);
+        } else if (result == -1) {
+            computerScore++;
+            loseStreak++;
+            winStreak = 0;
+            maxLoseStreak = Math.max(maxLoseStreak, loseStreak);
+        } else {
+            drawCount++;
+            winStreak = 0;
+            loseStreak = 0;
+        }
+    }
+    private static String getOutcomeText(int result) {
+        return result == 1 ? "You Win" : (result == -1 ? "Computer Wins" : "Draw");
+    }
+    private static void displayRoundResult(Move playerMove, Move computerMove, String result, long timeTaken) {
+        System.out.println("You chose: " + playerMove);
+        System.out.println("Computer chose: " + computerMove);
+        System.out.println("Result: " + result);
+        System.out.println("Time taken: " + timeTaken + " seconds");
+        System.out.println("Current Score - You: " + playerScore + " | Computer: " + computerScore + " | Draws: " + drawCount);
+    }
+    private static void declareWinner() {
+        System.out.println("\n=== Final Results ===");
+        System.out.println("You: " + playerScore + " | Computer: " + computerScore + " | Draws: " + drawCount);
+        if (playerScore > computerScore) {
+            System.out.println("Congratulations! You won the match.");
+        } else if (playerScore < computerScore) {
+            System.out.println("Computer wins the match.");
+        } else {
+            System.out.println("It's a tie.");
+        }
+    }
+    private static void showStatistics(int rounds) {
+        System.out.println("\n--- Match Statistics ---");
+        System.out.printf("Total Rounds: %d%n", rounds);
+        System.out.printf("Win Rate: %.2f%%\n", (playerScore * 100.0) / rounds);
+        System.out.printf("Loss Rate: %.2f%%\n", (computerScore * 100.0) / rounds);
+        System.out.printf("Draw Rate: %.2f%%\n", (drawCount * 100.0) / rounds);
+        System.out.println("Longest Win Streak: " + maxWinStreak);
+        System.out.println("Longest Lose Streak: " + maxLoseStreak);
+        System.out.println("\nRecent Rounds:");
+        for (Round r : history) {
+            System.out.println(r);
+        }
+    }
+    private static boolean askReplay() {
+        System.out.print("Do you want to play again? (yes/no): ");
+        String input = sc.nextLine().toLowerCase();
+        return input.equals("yes") || input.equals("y");
+    }
+}
